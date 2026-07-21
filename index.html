@@ -508,6 +508,80 @@
     </div>
   </div>
 
+  <!-- ══ PANTALLA: REINVERSIÓN ══ -->
+  <div class="screen" id="screen-reinvert">
+    <div class="header">
+      <div class="header-logo">Bot Reinversión</div>
+      <div class="badge">IA · Auto</div>
+    </div>
+
+    <!-- Banner AdMob -->
+    <div class="ad-container" style="margin:0 16px 12px">
+      <ins class="adsbygoogle"
+           style="display:block;width:100%;height:60px"
+           data-ad-client="ca-pub-4903263409458961"
+           data-ad-slot="9076841407"
+           data-ad-format="banner"
+           data-full-width-responsive="false"></ins>
+    </div>
+
+    <!-- Resumen ingresos actuales -->
+    <div class="section" style="margin:0 16px 12px">
+      <div class="section-title">Tus ingresos actuales</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div class="stat-card" style="padding:14px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">AdMob</div>
+          <div class="stat-val" style="font-size:20px" id="rv-admob">€0.00</div>
+        </div>
+        <div class="stat-card" style="padding:14px">
+          <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Afiliados</div>
+          <div class="stat-val" style="font-size:20px" id="rv-affiliate">€0.00</div>
+        </div>
+        <div class="stat-card" style="padding:14px;grid-column:span 2;display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Total acumulado</div>
+            <div class="stat-val" id="rv-total">€0.00</div>
+          </div>
+          <div style="text-align:right">
+            <div style="font-size:11px;color:var(--text3);margin-bottom:4px">Meta 50€</div>
+            <div style="font-size:18px;font-weight:800;color:var(--accent)" id="rv-pct">0%</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Botón analizar -->
+    <div style="padding:0 16px 12px">
+      <button onclick="runReinvert()" id="rv-btn"
+        style="width:100%;background:var(--grad);border:none;border-radius:14px;padding:16px;color:white;font-size:16px;font-weight:700;cursor:pointer;display:flex;align-items:center;justify-content:center;gap:10px">
+        <span id="rv-btn-icon">🔄</span> Generar plan de reinversión
+      </button>
+    </div>
+
+    <!-- Resultado plan IA -->
+    <div id="rv-result" style="margin:0 16px 16px;display:none">
+      <div class="section-title" style="margin-bottom:10px">📋 Tu plan ahora mismo</div>
+      <div id="rv-plan-text"
+        style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;font-size:14px;color:var(--text);line-height:1.8;white-space:pre-wrap"></div>
+    </div>
+
+    <!-- Historial de planes -->
+    <div class="section" style="margin:0 16px 16px" id="rv-history-section" style="display:none">
+      <div class="section-title">Últimos análisis</div>
+      <div id="rv-history" style="display:flex;flex-direction:column;gap:8px"></div>
+    </div>
+
+    <!-- Banner AdMob abajo -->
+    <div class="ad-container" style="margin:0 16px 80px">
+      <ins class="adsbygoogle"
+           style="display:block;width:100%;height:60px"
+           data-ad-client="ca-pub-4903263409458961"
+           data-ad-slot="4992723799"
+           data-ad-format="banner"
+           data-full-width-responsive="false"></ins>
+    </div>
+  </div>
+
   <!-- NAV -->
   <nav class="nav">
     <div class="nav-item active" onclick="goNav('home')" id="nav-home">
@@ -525,6 +599,10 @@
     <div class="nav-item" onclick="goNav('market')" id="nav-market">
       <div class="nav-icon">📈</div>
       <div class="nav-lbl">Mercado</div>
+    </div>
+    <div class="nav-item" onclick="goNav('reinvert')" id="nav-reinvert">
+      <div class="nav-icon">🔄</div>
+      <div class="nav-lbl">Reinvertir</div>
     </div>
     <div class="nav-item" onclick="goNav('profile')" id="nav-profile">
       <div class="nav-icon">👤</div>
@@ -589,7 +667,9 @@ function renderUI() {
 
   // AdMob estimado (simulado proporcional al balance)
   const admobEst = (s.balance||0) * 0.12;
+  state.admobEarnings = admobEst;
   document.getElementById('admob-income').textContent = fmt(admobEst);
+  updateReinvertStats();
 
   // Afiliados
   document.getElementById('affiliate-income').textContent = fmt(s.affiliateEarnings||0);
@@ -860,6 +940,82 @@ function sendAI() {
   if (q) askAI(q);
 }
 
+// ── BOT REINVERSIÓN ───────────────────────────────────────────────
+let rvHistory = JSON.parse(localStorage.getItem('rv_history') || '[]');
+
+function updateReinvertStats() {
+  const admob = state.admobEarnings || 0;
+  const aff   = state.affiliateEarnings || 0;
+  const total = admob + aff;
+  const goal  = 50;
+  const pct   = Math.min(100, ((total / goal) * 100)).toFixed(1);
+  document.getElementById('rv-admob').textContent     = '€' + admob.toFixed(2);
+  document.getElementById('rv-affiliate').textContent = '€' + aff.toFixed(2);
+  document.getElementById('rv-total').textContent     = '€' + total.toFixed(2);
+  document.getElementById('rv-pct').textContent       = pct + '%';
+}
+
+async function runReinvert() {
+  const btn  = document.getElementById('rv-btn');
+  const icon = document.getElementById('rv-btn-icon');
+  btn.disabled = true;
+  icon.textContent = '⏳';
+
+  const admob = state.admobEarnings || 0;
+  const aff   = state.affiliateEarnings || 0;
+  const total = admob + aff;
+
+  try {
+    const res  = await fetch('/api/reinvert', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ admob, affiliate: aff, total, goal: 50 })
+    });
+    const data = await res.json();
+
+    // Mostrar plan
+    document.getElementById('rv-result').style.display   = 'block';
+    document.getElementById('rv-plan-text').textContent  = data.plan || 'Sin respuesta';
+
+    // Guardar en historial
+    const entry = {
+      date:  new Date().toLocaleString('es-ES', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
+      total: '€' + (data.ingresos || total.toFixed(2)),
+      pct:   (data.porcentaje || 0) + '%',
+      plan:  data.plan || ''
+    };
+    rvHistory.unshift(entry);
+    if (rvHistory.length > 5) rvHistory.pop();
+    localStorage.setItem('rv_history', JSON.stringify(rvHistory));
+    renderRvHistory();
+
+    // Scroll al resultado
+    document.getElementById('rv-result').scrollIntoView({ behavior: 'smooth' });
+  } catch(e) {
+    document.getElementById('rv-result').style.display  = 'block';
+    document.getElementById('rv-plan-text').textContent = '❌ Error de conexión. Inténtalo de nuevo.';
+  }
+
+  btn.disabled     = false;
+  icon.textContent = '🔄';
+}
+
+function renderRvHistory() {
+  const sec = document.getElementById('rv-history-section');
+  const el  = document.getElementById('rv-history');
+  if (!rvHistory.length) { sec.style.display = 'none'; return; }
+  sec.style.display = 'block';
+  el.innerHTML = rvHistory.map(h => `
+    <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;cursor:pointer"
+         onclick="this.querySelector('.rv-detail').style.display=this.querySelector('.rv-detail').style.display==='none'?'block':'none'">
+      <div style="display:flex;justify-content:space-between;align-items:center">
+        <div style="font-size:12px;color:var(--text3)">${h.date}</div>
+        <div style="font-size:13px;font-weight:700;color:var(--accent)">${h.total} · ${h.pct}</div>
+      </div>
+      <div class="rv-detail" style="display:none;margin-top:10px;font-size:13px;color:var(--text2);line-height:1.7;white-space:pre-wrap">${h.plan}</div>
+    </div>`).join('');
+}
+
 // ── INIT ──────────────────────────────────────────────────────────
 window.addEventListener('load', () => {
   setTimeout(() => {
@@ -870,6 +1026,8 @@ window.addEventListener('load', () => {
   loadData();
   initAds();
   loadAffiliate();
+  updateReinvertStats();
+  renderRvHistory();
 
   // Auto-refresh cada 60s
   setInterval(loadData, 60000);
