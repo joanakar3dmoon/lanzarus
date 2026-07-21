@@ -224,6 +224,22 @@
   </div>
 </div>
 
+<!-- MODAL TARJETA DÉBITO -->
+<div class="modal-overlay" id="modal-card">
+  <div class="modal">
+    <div class="modal-handle"></div>
+    <div class="modal-title">💳 Tarjeta de débito</div>
+    <p style="font-size:13px;color:var(--text2);margin-bottom:16px;line-height:1.6">
+      Google AdMob paga por <strong>transferencia bancaria (IBAN)</strong> cuando superas 70€.<br>
+      Introduce tu IBAN para tenerlo a mano cuando llegue el momento.
+    </p>
+    <input class="modal-input" id="card-iban" type="text" placeholder="ES00 0000 0000 0000 0000 0000" maxlength="34"/>
+    <input class="modal-input" id="card-name" type="text" placeholder="Nombre del titular"/>
+    <button class="modal-btn" onclick="saveCard()">Guardar</button>
+    <button class="modal-cancel" onclick="closeModal('modal-card')">Cancelar</button>
+  </div>
+</div>
+
 <!-- MODAL RETIRO -->
 <div class="modal-overlay" id="modal-withdraw">
   <div class="modal">
@@ -454,11 +470,11 @@
     <div class="section">
       <div class="section-title">Configuración</div>
       <div class="settings-list">
-        <div class="setting-item">
+        <div class="setting-item" onclick="openCardModal()">
           <div class="setting-icon">💳</div>
           <div class="setting-info">
-            <div class="setting-title">PayPal de retiros</div>
-            <div class="setting-sub">joanlazaro83@gmail.com</div>
+            <div class="setting-title">Tarjeta de débito</div>
+            <div class="setting-sub" id="card-display">Sin configurar</div>
           </div>
           <div class="setting-arrow">›</div>
         </div>
@@ -595,10 +611,6 @@
     <div class="nav-item" onclick="goNav('affiliate')" id="nav-affiliate">
       <div class="nav-icon">🛒</div>
       <div class="nav-lbl">Afiliados</div>
-    </div>
-    <div class="nav-item" onclick="goNav('market')" id="nav-market">
-      <div class="nav-icon">📈</div>
-      <div class="nav-lbl">Mercado</div>
     </div>
     <div class="nav-item" onclick="goNav('reinvert')" id="nav-reinvert">
       <div class="nav-icon">🔄</div>
@@ -943,6 +955,33 @@ function sendAI() {
 // ── BOT REINVERSIÓN ───────────────────────────────────────────────
 let rvHistory = JSON.parse(localStorage.getItem('rv_history') || '[]');
 
+// ── TARJETA DÉBITO ────────────────────────────────────────────────
+function openCardModal() {
+  const saved = JSON.parse(localStorage.getItem('card_data') || '{}');
+  if (saved.iban) document.getElementById('card-iban').value = saved.iban;
+  if (saved.name) document.getElementById('card-name').value = saved.name;
+  document.getElementById('modal-card').classList.add('active');
+}
+
+function saveCard() {
+  const iban = document.getElementById('card-iban').value.trim().replace(/\s/g,'');
+  const name = document.getElementById('card-name').value.trim();
+  if (!iban || iban.length < 15) { alert('Introduce un IBAN válido'); return; }
+  localStorage.setItem('card_data', JSON.stringify({ iban, name }));
+  // Mostrar enmascarado
+  const masked = iban.substring(0,4) + ' •••• •••• •••• ' + iban.slice(-4);
+  document.getElementById('card-display').textContent = (name ? name + ' — ' : '') + masked;
+  closeModal('modal-card');
+}
+
+function loadCardDisplay() {
+  const saved = JSON.parse(localStorage.getItem('card_data') || '{}');
+  if (saved.iban) {
+    const masked = saved.iban.substring(0,4) + ' •••• •••• •••• ' + saved.iban.slice(-4);
+    document.getElementById('card-display').textContent = (saved.name ? saved.name + ' — ' : '') + masked;
+  }
+}
+
 function updateReinvertStats() {
   const admob = state.admobEarnings || 0;
   const aff   = state.affiliateEarnings || 0;
@@ -1028,6 +1067,7 @@ window.addEventListener('load', () => {
   loadAffiliate();
   updateReinvertStats();
   renderRvHistory();
+  loadCardDisplay();
 
   // Auto-refresh cada 60s
   setInterval(loadData, 60000);
