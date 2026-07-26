@@ -499,10 +499,10 @@
           </div>
           <div class="setting-arrow" style="color:var(--green)">✓</div>
         </div>
-        <div class="setting-item" onclick="syncInverGrow()">
+        <div class="setting-item" onclick="syncLanzarus()">
           <div class="setting-icon">🔄</div>
           <div class="setting-info">
-            <div class="setting-title">Sincronizar InverGrow</div>
+            <div class="setting-title">Sincronizar datos</div>
             <div class="setting-sub">Actualizar datos del servidor</div>
           </div>
           <div class="setting-arrow">›</div>
@@ -760,14 +760,14 @@ function renderAI() {
 // ── LOAD DATA ─────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const r = await fetch('https://invergrow.vercel.app/api/');
+    const r = await fetch('https://lanzarus.vercel.app/api/');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     state = { ...state, ...data };
     localStorage.setItem('lanzarus_state', JSON.stringify(state));
     renderUI();
   } catch(e) {
-    console.warn('InverGrow offline, usando datos locales:', e);
+    console.warn('Lanzarus offline, usando datos locales:', e);
     // Cargar desde localStorage si existe
     const saved = localStorage.getItem('lanzarus_state');
     if (saved) {
@@ -779,7 +779,7 @@ async function loadData() {
   }
 }
 
-async function syncInverGrow() {
+async function syncLanzarus() {
   showToast('Sincronizando...');
   await loadData();
   showToast('✅ Datos actualizados');
@@ -791,7 +791,7 @@ async function doDeposit() {
   const desc = document.getElementById('dep-desc').value || 'Ingreso manual';
   if (!amount || amount <= 0) { showToast('Introduce una cantidad válida', 'error'); return; }
   try {
-    const r = await fetch('https://invergrow.vercel.app/api/income', {
+    const r = await fetch('https://lanzarus.vercel.app/api/income', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ amount, description: desc, source: 'manual' })
@@ -818,7 +818,7 @@ async function doWithdraw() {
   if (!amount || amount <= 0) { showToast('Introduce una cantidad válida', 'error'); return; }
   if (amount > state.balance) { showToast('Saldo insuficiente', 'error'); return; }
   try {
-    const r = await fetch('https://invergrow.vercel.app/api/withdraw', {
+    const r = await fetch('https://lanzarus.vercel.app/api/withdraw', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ amount, recipientEmail: email, adminCode: 'joan123', method: 'paypal' })
