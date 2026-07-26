@@ -323,7 +323,7 @@
     </div>
 
     <!-- AdMob Banner -->
-    <div class="ad-container">
+    <div class="ad-container" style="display:none">
       <ins class="adsbygoogle"
            style="display:block;width:100%;height:60px"
            data-ad-client="ca-pub-4903263409458961"
@@ -775,7 +775,7 @@ function renderAI() {
 // ── LOAD DATA ─────────────────────────────────────────────────────
 async function loadData() {
   try {
-    const r = await fetch('https://invergrow.vercel.app/api/');
+    const r = await fetch('/api/');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     state = { ...state, ...data };
@@ -806,7 +806,7 @@ async function doDeposit() {
   const desc = document.getElementById('dep-desc').value || 'Ingreso manual';
   if (!amount || amount <= 0) { showToast('Introduce una cantidad válida', 'error'); return; }
   try {
-    const r = await fetch('https://invergrow.vercel.app/api/income', {
+    const r = await fetch('/api/income', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ amount, description: desc, source: 'manual' })
@@ -833,7 +833,7 @@ async function doWithdraw() {
   if (!amount || amount <= 0) { showToast('Introduce una cantidad válida', 'error'); return; }
   if (amount > state.balance) { showToast('Saldo insuficiente', 'error'); return; }
   try {
-    const r = await fetch('https://invergrow.vercel.app/api/withdraw', {
+    const r = await fetch('/api/withdraw', {
       method: 'POST',
       headers: {'Content-Type':'application/json'},
       body: JSON.stringify({ amount, recipientEmail: email, adminCode: 'joan123', method: 'paypal' })
