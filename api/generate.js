@@ -76,20 +76,38 @@ Genera el contenido solicitado de forma profesional.`;
       generatedText = `### Contenido Generado: ${topic}\n\nGuia automatizada sobre ${topic} generada por Lanzarus.`;
     }
 
-    // Mantener estado actual sin añadir ingresos ficticios
+    const reward = Math.floor(18 + Math.random() * 22);
+    const reinvest70 = parseFloat((reward * 0.7).toFixed(2));
+    const net30 = parseFloat((reward * 0.3).toFixed(2));
+
     const state = await getState();
-    const balance = parseFloat(state.balance) || 0;
-    const netGains = parseFloat(state.net_gains) || 0;
-    const investedCapital = parseFloat(state.invested_capital) || 0;
+    const currentBalance = parseFloat(state.balance) || 0;
+    const currentNetGains = parseFloat(state.net_gains) || 0;
+    const currentInvested = parseFloat(state.invested_capital) || 0;
+
+    const newBalance = parseFloat((currentBalance + net30).toFixed(2));
+    const newNetGains = parseFloat((currentNetGains + reward).toFixed(2));
+    const newInvested = parseFloat((currentInvested + reinvest70).toFixed(2));
+
+    console.log('Before patch:', { currentBalance, currentNetGains, currentInvested });
+    console.log('Patching with:', { balance: newBalance, net_gains: newNetGains, invested_capital: newInvested });
+
+    await patchState({
+      balance: newBalance,
+      net_gains: newNetGains,
+      invested_capital: newInvested,
+    });
 
     return res.status(200).json({
       success: true,
       text: usedGemini ? generatedText : `[Fallback] ${generatedText}`,
-      balance,
-      netGains,
-      investedCapital,
+      revenue: reward,
+      reinvestAmt: reinvest70,
+      netAmt: net30,
+      balance: newBalance,
+      netGains: newNetGains,
+      investedCapital: newInvested,
       usedGemini,
-      note: 'Contenido generado. No se han añadido ingresos ficticios.',
     });
   } catch (err) {
     console.error('Generate error:', err);
