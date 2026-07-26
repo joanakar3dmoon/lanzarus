@@ -47,7 +47,7 @@ async function callGemini(prompt) {
   return data.candidates?.[0]?.content?.parts?.[0]?.text || '';
 }
 
-export default async function handler(req, res) {
+module.exports = async function handler(req, res) {
   res.setHeader('Access-Control-Allow-Origin', '*');
   res.setHeader('Access-Control-Allow-Methods', 'POST, OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type');
@@ -89,6 +89,9 @@ Genera el contenido solicitado de forma profesional.`;
     const newNetGains = parseFloat((currentNetGains + reward).toFixed(2));
     const newInvested = parseFloat((currentInvested + reinvest70).toFixed(2));
 
+    console.log('Before patch:', { currentBalance, currentNetGains, currentInvested });
+    console.log('Patching with:', { balance: newBalance, net_gains: newNetGains, invested_capital: newInvested });
+
     await patchState({
       balance: newBalance,
       net_gains: newNetGains,
@@ -107,6 +110,7 @@ Genera el contenido solicitado de forma profesional.`;
       usedGemini,
     });
   } catch (err) {
+    console.error('Generate error:', err);
     return res.status(500).json({ error: err.message });
   }
-}
+};
