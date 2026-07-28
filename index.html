@@ -680,6 +680,71 @@ function showToast(msg, type='') {
 const fmt = v => '€' + Number(v||0).toFixed(2);
 
 // ── RENDER UI ─────────────────────────────────────────────────────
+
+// ── BANKED: Historial de retiros reales ────────────────────────
+function saveWithdrawal(amount, method, status) {
+  const history = JSON.parse(localStorage.getItem('lanzarus_withdrawals') || '[]');
+  history.unshift({
+    id: 'WD-' + Date.now(),
+    amount: amount,
+    method: method || 'PayPal',
+    status: status || 'PENDING',
+    date: new Date().toISOString(),
+    email: 'joanlazaro83@gmail.com'
+  });
+  localStorage.setItem('lanzarus_withdrawals', JSON.stringify(history));
+  renderBanked();
+}
+
+function renderBanked() {
+  const history = JSON.parse(localStorage.getItem('lanzarus_withdrawals') || '[]');
+  const list = document.getElementById('banked-list');
+  const empty = document.getElementById('banked-empty');
+  const count = document.getElementById('banked-count');
+  const totalEl = document.getElementById('banked-total');
+  const avgEl = document.getElementById('banked-avg');
+  const latestEl = document.getElementById('banked-latest');
+  const methodEl = document.getElementById('banked-method');
+
+  if (!list) return;
+
+  if (history.length === 0) {
+    list.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:30px 0">\u23f3 A\u00fan no has retirado. \u00a1Acumula saldo y retira!</div>';
+    if (count) count.textContent = '0 retiros';
+    if (totalEl) totalEl.textContent = '\u20ac0.00';
+    if (avgEl) avgEl.textContent = '\u20ac0.00';
+    if (latestEl) latestEl.textContent = '---';
+    return;
+  }
+
+  const total = history.reduce((sum, w) => sum + w.amount, 0);
+  const avg = total / history.length;
+
+  if (count) count.textContent = history.length + ' retiro' + (history.length === 1 ? '' : 's');
+  if (totalEl) totalEl.textContent = '\u20ac' + total.toFixed(2);
+  if (avgEl) avgEl.textContent = '\u20ac' + avg.toFixed(2);
+  if (latestEl) latestEl.textContent = new Date(history[0].date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (methodEl) methodEl.textContent = history[0].method || 'PayPal';
+
+  list.innerHTML = history.map(function(w) {
+    const isSuccess = w.status === 'COMPLETED';
+    const d = new Date(w.date);
+    const dateStr = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const icon = isSuccess ? '\u2705' : '\u23f3';
+    const color = isSuccess ? '#00ff88' : '#ff6b35';
+    const bg = isSuccess ? 'rgba(0,255,136,0.1)' : 'rgba(255,107,53,0.1)';
+    const statusText = isSuccess ? 'Completado' : 'Pendiente';
+    return '<div class="tx-item">' +
+      '<div class="tx-icon" style="background:' + bg + ';color:' + color + '">' + icon + '</div>' +
+      '<div class="tx-info">' +
+        '<div class="tx-name">Retiro PayPal</div>' +
+        '<div class="tx-date">' + dateStr + ' \u00b7 ' + statusText + '</div>' +
+      '</div>' +
+      '<div class="tx-amount" style="color:' + color + '">-' + w.amount.toFixed(2) + '\u20ac</div>' +
+    '</div>';
+  }).join('');
+}
+
 function renderUI() {
   const s = state;
   document.getElementById('bal-num').textContent = Number(s.balance||0).toFixed(2);
@@ -781,6 +846,7 @@ async function loadData() {
     state = { ...state, ...data };
     localStorage.setItem('lanzarus_state', JSON.stringify(state));
     renderUI();
+  renderBanked();
   } catch(e) {
     console.warn('InverGrow offline, usando datos locales:', e);
     // Cargar desde localStorage si existe
@@ -789,6 +855,7 @@ async function loadData() {
       try {
         state = { ...state, ...JSON.parse(saved) };
         renderUI();
+  renderBanked();
       } catch(e2) {}
     }
   }
@@ -840,9 +907,11 @@ async function doWithdraw() {
     });
     const data = await r.json();
     if (data.success) {
+      saveWithdrawal(amount, 'PayPal', 'PENDING');
       closeModal('modal-withdraw');
       document.getElementById('wd-amount').value = '';
       await loadData();
+      renderBanked();
       showToast('✅ Retiro solicitado: ' + fmt(amount));
     } else {
       showToast('Error: ' + (data.error||'desconocido'), 'error');
