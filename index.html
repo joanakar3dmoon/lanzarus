@@ -727,29 +727,223 @@ let state = {
   aiWorkers: []
 };
 
-// ── CARGA DE DATOS ────────────────────────────────────────────────
+
+function renderUI() {
+  const s = state;
+  document.getElementById('bal-num').textContent = Number(s.balance||0).toFixed(2);
+
+  // calcular ganado hoy
+  const today = new Date().toISOString().split('T')[0];
+  const todayGain = (s.transactions||[])
+    .filter(t => t.type !== 'WITHDRAWAL' && t.date && t.date.startsWith(today))
+    .reduce((a,t) => a + (t.amount||0), 0);
+  document.getElementById('bal-change').textContent = `↑ +${fmt(todayGain)} hoy`;
+
+  document.getElementById('total-earned').textContent = fmt(s.netGains);
+  document.getElementById('total-withdrawn').textContent = fmt(s.totalWithdrawals);
+
+  // AI stats
+  const active = (s.aiWorkers||[]).filter(w => w.status === 'ACTIVE');
+  const aiGen = active.reduce((a,w) => a + (w.totalGenerated||0), 0);
+  document.getElementById('ai-income').textContent = fmt(aiGen);
+  document.getElementById('ai-workers-active').textContent = active.length + ' workers activos';
+  document.getElementById('ai-total-badge').textContent = fmt(aiGen) + ' generado';
+
+  // AdMob estimado (simulado proporcional al balance)
+  const admobEst = (s.balance||0) * 0.12;
+  state.admobEarnings = admobEst;
+  document.getElementById('admob-income').textContent = fmt(admobEst);
+  updateReinvertStats();
+
+  // Afiliados
+  document.getElementById('affiliate-income').textContent = fmt(s.affiliateEarnings||0);
+  document.getElementById('aff-total').textContent = fmt(s.affiliateEarnings||0);
+
+  // Meta 50€
+  const pct = Math.min(100, Math.round(((s.balance||0)/50)*100));
+  const left = Math.max(0, 50-(s.balance||0));
+  document.getElementById('goal-progress').textContent = pct + '%';
+  const goalEl = document.getElementById('goal-left');
+  goalEl.textContent = pct >= 100 ? '✅ ¡Meta alcanzada!' : 'Faltan ' + fmt(left);
+  goalEl.className = 'stat-change ' + (pct >= 100 ? 'up' : '');
+
+  // Transacciones
+  renderTx();
+  // AI Workers
+  renderAI();
+}
+
+
+
+function renderTx() {
+  const list = document.getElementById('tx-list');
+  const txs = (state.transactions||[]).slice(0,10);
+  if (!txs.length) { list.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Sin transacciones aún</div>'; return; }
+  const icons = { DEPOSIT:'💰', WITHDRAWAL:'💸', AI_REVENUE_WITHDRAW:'🤖', AI_REINVEST:'♻️', YOUTUBE:'▶️' };
+  const colors = { DEPOSIT:'#1a3a25', WITHDRAWAL:'#3a1a1a', AI_REVENUE_WITHDRAW:'#1a2040', AI_REINVEST:'#2a1a3a' };
+  list.innerHTML = txs.map(t => {
+    const isPos = t.type !== 'WITHDRAWAL';
+    const icon = icons[t.type] || '💱';
+    const bg = colors[t.type] || '#1a1a30';
+    const date = (t.date||'').substring(0,10);
+    return `<div class="tx-item">
+      <div class="tx-icon" style="background:${bg}">${icon}</div>
+      <div class="tx-info">
+        <div class="tx-name">${(t.description||t.type||'').substring(0,40)}</div>
+        <div class="tx-date">${date} · ${t.status||''}</div>
+      </div>
+      <div class="tx-amount ${isPos?'pos':'neg'}">${isPos?'+':'-'}${fmt(t.amount)}</div>
+    </div>`;
+  }).join('');
+}
+
+
+
+function renderAI() {
+  const list = document.getElementById('ai-list');
+  const workers = state.aiWorkers||[];
+  if (!workers.length) { list.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:20px">Sin workers</div>'; return; }
+  list.innerHTML = workers.map(w => {
+    const statusCls = w.status === 'ACTIVE' ? 'active' : w.unlocked === false ? 'locked' : 'idle';
+    const statusTxt = w.status === 'ACTIVE' ? 'Activo' : w.unlocked === false ? 'Bloqueado' : 'Inactivo';
+    const pct = Math.min(100, Math.round(((w.totalGenerated||0)/10)*100));
+    return `<div class="ai-card">
+      <div class="ai-avatar">${w.icon||'🤖'}</div>
+      <div class="ai-info" style="flex:1">
+        <div style="display:flex;justify-content:space-between;align-items:center">
+          <div>
+            <div class="ai-name">${w.name}</div>
+            <div class="ai-role">${w.role}</div>
+            <div class="ai-rate">+${((w.baseIncomeRate||0)*60).toFixed(3)}€/min · Total: ${fmt(w.totalGenerated)}</div>
+          </div>
+          <div class="ai-status ${statusCls}">${statusTxt}</div>
+        </div>
+        <div class="ai-bar"><div class="ai-bar-fill" style="width:${pct}%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+// ── LOAD DATA ─────────────────────────────────────────────────────
+
+
+function updateReinvertStats() {
+  const admob = state.admobEarnings || 0;
+  const aff   = state.affiliateEarnings || 0;
+  const total = admob + aff;
+  const goal  = 50;
+  const pct   = Math.min(100, ((total / goal) * 100)).toFixed(1);
+  document.getElementById('rv-admob').textContent     = '€' + admob.toFixed(2);
+  document.getElementById('rv-affiliate').textContent = '€' + aff.toFixed(2);
+  document.getElementById('rv-total').textContent     = '€' + total.toFixed(2);
+  document.getElementById('rv-pct').textContent       = pct + '%';
+}
+
+async function runReinvert() {
+  const btn  = document.getElementById('rv-btn');
+  const icon = document.getElementById('rv-btn-icon');
+  btn.disabled = true;
+  icon.textContent = '⏳';
+
+  const admob = state.admobEarnings || 0;
+  const aff   = state.affili
+
+// ── BANKED: Historial de retiros reales ────────────────────────
+function renderBanked() {
+  const history = JSON.parse(localStorage.getItem('lanzarus_withdrawals') || '[]');
+  const list = document.getElementById('banked-list');
+  const empty = document.getElementById('banked-empty');
+  const count = document.getElementById('banked-count');
+  const totalEl = document.getElementById('banked-total');
+  const avgEl = document.getElementById('banked-avg');
+  const latestEl = document.getElementById('banked-latest');
+  const methodEl = document.getElementById('banked-method');
+
+  if (!list) return;
+
+  if (history.length === 0) {
+    list.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:30px 0">\u23f3 A\u00fan no has retirado. \u00a1Acumula saldo y retira!</div>';
+    if (count) count.textContent = '0 retiros';
+    if (totalEl) totalEl.textContent = '\u20ac0.00';
+    if (avgEl) avgEl.textContent = '\u20ac0.00';
+    if (latestEl) latestEl.textContent = '---';
+    return;
+  }
+
+  const total = history.reduce((sum, w) => sum + w.amount, 0);
+  const avg = total / history.length;
+
+  if (count) count.textContent = history.length + ' retiro' + (history.length === 1 ? '' : 's');
+  if (totalEl) totalEl.textContent = '\u20ac' + total.toFixed(2);
+  if (avgEl) avgEl.textContent = '\u20ac' + avg.toFixed(2);
+  if (latestEl) latestEl.textContent = new Date(history[0].date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  if (methodEl) methodEl.textContent = history[0].method || 'PayPal';
+
+  list.innerHTML = history.map(function(w) {
+    const isSuccess = w.status === 'COMPLETED';
+    const d = new Date(w.date);
+    const dateStr = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    const icon = isSuccess ? '\u2705' : '\u23f3';
+    const color = isSuccess ? '#00ff88' : '#ff6b35';
+    const bg = isSuccess ? 'rgba(0,255,136,0.1)' : 'rgba(255,107,53,0.1)';
+    const statusText = isSuccess ? 'Completado' : 'Pendiente';
+    return '<div class="tx-item">' +
+      '<div class="tx-icon" style="background:' + bg + ';color:' + color + '">' + icon + '</div>' +
+      '<div class="tx-info">' +
+        '<div class="tx-name">Retiro PayPal</div>' +
+        '<div class="tx-date">' + dateStr + ' \u00b7 ' + statusText + '</div>' +
+      '</div>' +
+      '<div class="tx-amount" style="color:' + color + '">-' + w.amount.toFixed(2) + '\u20ac</div>' +
+    '</div>';
+  }).join('');
+}
+
+
+// ── BANKED: Historial de retiros reales ────────────────────────
+function saveWithdrawal(amount, method, status) {
+  var history = JSON.parse(localStorage.getItem('lanzarus_withdrawals') || '[]');
+  history.unshift({
+    id: 'WD-' + Date.now(),
+    amount: amount,
+    method: method || 'PayPal',
+    status: status || 'PENDING',
+    date: new Date().toISOString(),
+    email: 'joanlazaro83@gmail.com'
+  });
+  localStorage.setItem('lanzarus_withdrawals', JSON.stringify(history));
+  renderBanked();
+}
+
+// ── BANKED: Historial de retiros reales ────────────────────────
 async function loadData() {
   try {
     const r = await fetch('/api/');
-    if (r.ok) {
-      const data = await r.json();
-      state = { ...state, ...data };
-      localStorage.setItem('lanzarus_state', JSON.stringify(state));
-    } else {
-      throw new Error('API no OK');
-    }
+    if (!r.ok) throw new Error('HTTP ' + r.status);
+    const data = await r.json();
+    state = { ...state, ...data };
+    localStorage.setItem('lanzarus_state', JSON.stringify(state));
+    renderUI();
+  renderBanked();
+  renderBanked();
   } catch(e) {
-    console.warn('API offline, usando caché local:', e);
+    console.warn('InverGrow offline, usando datos locales:', e);
+    // Cargar desde localStorage si existe
     const saved = localStorage.getItem('lanzarus_state');
     if (saved) {
-      try { state = { ...state, ...JSON.parse(saved) }; } catch(e2) {}
+      try {
+        state = { ...state, ...JSON.parse(saved) };
+        renderUI();
+  renderBanked();
+  renderBanked();
+      } catch(e2) {}
     }
   }
-  renderUI();
-  if (typeof renderBanked === 'function') renderBanked();
 }
 
-async function syncInverGrow() {
+
+
+// ── CARGA DE DATOS ────────────────────────────────────────────────
+async async function syncInverGrow() {
   showToast('Sincronizando...');
   await loadData();
   showToast('✅ Datos actualizados');
@@ -945,64 +1139,7 @@ function sendAI() {
 // ── BOT REINVERSIÓN ───────────────────────────────────────────────
 let rvHistory = JSON.parse(localStorage.getItem('rv_history') || '[]');
 
-function updateReinvertStats() {
-  const admob = state.admobEarnings || 0;
-  const aff   = state.affiliateEarnings || 0;
-  const total = admob + aff;
-  const goal  = 50;
-  const pct   = Math.min(100, ((total / goal) * 100)).toFixed(1);
-  document.getElementById('rv-admob').textContent     = '€' + admob.toFixed(2);
-  document.getElementById('rv-affiliate').textContent = '€' + aff.toFixed(2);
-  document.getElementById('rv-total').textContent     = '€' + total.toFixed(2);
-  document.getElementById('rv-pct').textContent       = pct + '%';
-}
-
-async function runReinvert() {
-  const btn  = document.getElementById('rv-btn');
-  const icon = document.getElementById('rv-btn-icon');
-  btn.disabled = true;
-  icon.textContent = '⏳';
-
-  const admob = state.admobEarnings || 0;
-  const aff   = state.affiliateEarnings || 0;
-  const total = admob + aff;
-
-  try {
-    const res  = await fetch('https://lanzarus.vercel.app/api/reinvert', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ admob, affiliate: aff, total, goal: 50 })
-    });
-    const data = await res.json();
-
-    // Mostrar plan
-    document.getElementById('rv-result').style.display   = 'block';
-    document.getElementById('rv-plan-text').textContent  = data.plan || 'Sin respuesta';
-
-    // Guardar en historial
-    const entry = {
-      date:  new Date().toLocaleString('es-ES', {day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'}),
-      total: '€' + (data.ingresos || total.toFixed(2)),
-      pct:   (data.porcentaje || 0) + '%',
-      plan:  data.plan || ''
-    };
-    rvHistory.unshift(entry);
-    if (rvHistory.length > 5) rvHistory.pop();
-    localStorage.setItem('rv_history', JSON.stringify(rvHistory));
-    renderRvHistory();
-
-    // Scroll al resultado
-    document.getElementById('rv-result').scrollIntoView({ behavior: 'smooth' });
-  } catch(e) {
-    document.getElementById('rv-result').style.display  = 'block';
-    document.getElementById('rv-plan-text').textContent = '❌ Error de conexión. Inténtalo de nuevo.';
-  }
-
-  btn.disabled     = false;
-  icon.textContent = '🔄';
-}
-
-function renderRvHistory() {
+async function renderRvHistory() {
   const sec = document.getElementById('rv-history-section');
   const el  = document.getElementById('rv-history');
   if (!rvHistory.length) { sec.style.display = 'none'; return; }
