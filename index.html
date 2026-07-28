@@ -922,28 +922,19 @@ async function loadData() {
     const data = await r.json();
     state = { ...state, ...data };
     localStorage.setItem('lanzarus_state', JSON.stringify(state));
-    renderUI();
-  renderBanked();
-  renderBanked();
   } catch(e) {
-    console.warn('InverGrow offline, usando datos locales:', e);
-    // Cargar desde localStorage si existe
+    console.warn('API offline, usando caché local:', e);
     const saved = localStorage.getItem('lanzarus_state');
     if (saved) {
-      try {
-        state = { ...state, ...JSON.parse(saved) };
-        renderUI();
-  renderBanked();
-  renderBanked();
-      } catch(e2) {}
+      try { state = { ...state, ...JSON.parse(saved) }; } catch(e2) {}
     }
   }
+  renderUI();
+  if (typeof renderBanked === 'function') renderBanked();
 }
 
-
-
 // ── CARGA DE DATOS ────────────────────────────────────────────────
-async async function syncInverGrow() {
+async function syncInverGrowasync function syncInverGrow() {
   showToast('Sincronizando...');
   await loadData();
   showToast('✅ Datos actualizados');
