@@ -474,6 +474,68 @@
     </div>
   </div>
 
+  <!-- ══ PANTALLA: BANKED (Retiros reales) ══ -->
+  <div class="screen" id="screen-banked">
+    <div class="header">
+      <div class="header-logo">🏦 Banked</div>
+      <div class="header-right">
+        <div class="badge" style="background:linear-gradient(135deg,#00d4ff,#a855f7)">Retiro</div>
+        <div class="notif-btn" onclick="requestPayout()">💳</div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:16px">
+        <div class="section-title">💰 Mis retiros reales</div>
+        <div style="font-size:12px;color:var(--text3)" id="banked-count">0 retiros</div>
+      </div>
+      <div id="banked-list" class="tx-list">
+        <div style="color:var(--text3);font-size:13px;text-align:center;padding:30px 0" id="banked-empty">
+          Aun no has retirado. Acumula saldo y retira!
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div class="section-title">Resumen Banked</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:12px">
+        <div class="stat-card">
+          <div class="stat-icon">💸</div>
+          <div class="stat-val" style="color:#00d4ff" id="banked-total">€0.00</div>
+          <div class="stat-lbl">Total retirado</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📅</div>
+          <div class="stat-val" style="color:#a855f7" id="banked-avg">€0.00</div>
+          <div class="stat-lbl">Promedio/retiro</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">🔄</div>
+          <div class="stat-val" style="color:#00ff88" id="banked-method">PayPal</div>
+          <div class="stat-lbl">Metodo principal</div>
+        </div>
+        <div class="stat-card">
+          <div class="stat-icon">📈</div>
+          <div class="stat-val" style="color:#ff6b35" id="banked-latest">---</div>
+          <div class="stat-lbl">Ultimo retiro</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="section">
+      <div style="background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:16px;display:flex;align-items:center;gap:12px">
+        <div style="width:44px;height:44px;border-radius:12px;background:linear-gradient(135deg,#003087,#009cde);display:flex;align-items:center;justify-content:center;font-size:20px;flex-shrink:0">💳</div>
+        <div style="flex:1">
+          <div style="font-size:14px;font-weight:600">PayPal</div>
+          <div style="font-size:12px;color:var(--text3)">joanlazaro83@gmail.com</div>
+        </div>
+        <div style="padding:6px 14px;background:rgba(16,185,129,0.15);border:1px solid rgba(16,185,129,0.3);border-radius:20px;color:#00ff88;font-size:11px;font-weight:700">Conectado</div>
+      </div>
+      <div style="margin-top:10px;padding:14px;background:rgba(255,107,53,0.08);border:1px solid rgba(255,107,53,0.2);border-radius:12px;font-size:12px;color:var(--text2);line-height:1.6">
+        Los retiros se procesan manualmente. Una vez solicitado, recibiras el pago en tu cuenta de PayPal en 24-48h.
+      </div>
+    </div>
+  </div>
   <!-- ══ PANTALLA: PERFIL ══ -->
   <div class="screen" id="screen-profile">
     <div class="header">
@@ -640,6 +702,10 @@
       <div class="nav-icon">🔄</div>
       <div class="nav-lbl">Reinvertir</div>
     </div>
+    <div class="nav-item" onclick="goNav('banked')" id="nav-banked">
+      <div class="nav-icon">🏦</div>
+      <div class="nav-lbl">Banked</div>
+    </div>
     <div class="nav-item" onclick="goNav('profile')" id="nav-profile">
       <div class="nav-icon">👤</div>
       <div class="nav-lbl">Perfil</div>
@@ -745,6 +811,66 @@ function renderBanked() {
   }).join('');
 }
 
+
+// ── BANKED: Historial de retiros reales ────────────────────────
+function saveWithdrawal(amount, method, status) {
+  var history = JSON.parse(localStorage.getItem('lanzarus_withdrawals') || '[]');
+  history.unshift({
+    id: 'WD-' + Date.now(),
+    amount: amount,
+    method: method || 'PayPal',
+    status: status || 'PENDING',
+    date: new Date().toISOString(),
+    email: 'joanlazaro83@gmail.com'
+  });
+  localStorage.setItem('lanzarus_withdrawals', JSON.stringify(history));
+  renderBanked();
+}
+
+function renderBanked() {
+  var history = JSON.parse(localStorage.getItem('lanzarus_withdrawals') || '[]');
+  var list = document.getElementById('banked-list');
+  var count = document.getElementById('banked-count');
+  var totalEl = document.getElementById('banked-total');
+  var avgEl = document.getElementById('banked-avg');
+  var latestEl = document.getElementById('banked-latest');
+  if (!list) return;
+  if (history.length === 0) {
+    list.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:30px 0">Aun no has retirado. Acumula saldo y retira!</div>';
+    if (count) count.textContent = '0 retiros';
+    if (totalEl) totalEl.textContent = '€0.00';
+    if (avgEl) avgEl.textContent = '€0.00';
+    if (latestEl) latestEl.textContent = '---';
+    return;
+  }
+  var total = 0;
+  for (var i = 0; i < history.length; i++) { total += history[i].amount; }
+  var avg = total / history.length;
+  if (count) count.textContent = history.length + ' retiro' + (history.length === 1 ? '' : 's');
+  if (totalEl) totalEl.textContent = '€' + total.toFixed(2);
+  if (avgEl) avgEl.textContent = '€' + avg.toFixed(2);
+  if (latestEl) {
+    var d = new Date(history[0].date);
+    latestEl.textContent = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
+  }
+  var html = '';
+  for (var i = 0; i < history.length; i++) {
+    var w = history[i];
+    var isSuccess = w.status === 'COMPLETED';
+    var d = new Date(w.date);
+    var dateStr = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    html += '<div class="tx-item">' +
+      '<div class="tx-icon" style="background:' + (isSuccess ? 'rgba(0,255,136,0.1)' : 'rgba(255,107,53,0.1)') + '; color:' + (isSuccess ? '#00ff88' : '#ff6b35') + '">' + (isSuccess ? '✅' : '⏳') + '</div>' +
+      '<div class="tx-info">' +
+        '<div class="tx-name">Retiro PayPal</div>' +
+        '<div class="tx-date">' + dateStr + ' · ' + (isSuccess ? 'Completado' : 'Pendiente') + '</div>' +
+      '</div>' +
+      '<div class="tx-amount" style="color:' + (isSuccess ? '#00ff88' : '#ff6b35') + '">-' + w.amount.toFixed(2) + '€</div>' +
+    '</div>';
+  }
+  list.innerHTML = html;
+}
+
 function renderUI() {
   const s = state;
   document.getElementById('bal-num').textContent = Number(s.balance||0).toFixed(2);
@@ -847,6 +973,7 @@ async function loadData() {
     localStorage.setItem('lanzarus_state', JSON.stringify(state));
     renderUI();
   renderBanked();
+  renderBanked();
   } catch(e) {
     console.warn('InverGrow offline, usando datos locales:', e);
     // Cargar desde localStorage si existe
@@ -855,6 +982,7 @@ async function loadData() {
       try {
         state = { ...state, ...JSON.parse(saved) };
         renderUI();
+  renderBanked();
   renderBanked();
       } catch(e2) {}
     }
