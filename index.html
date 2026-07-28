@@ -716,45 +716,37 @@
 </div>
 
 <script>
-const API = '';  // local API — usamos InverGrow como backend de datos
+const API = '';  // local API
 
-  let state = {
-    balance: 11.50,
-    netGains: 37.00,
-    investedCapital: 100.00,
-    totalWithdrawals: 0,
-    aiWorkers: []
-  };
+// ── ESTADO GLOBAL ────────────────────────────────────────────────
+let state = {
+  balance: 0,
+  netGains: 0,
+  investedCapital: 0,
+  totalWithdrawals: 0,
+  aiWorkers: []
+};
 
-  async function loadData() {
-    try {
-      const r = await fetch('/api/');
-      if (r.ok) {
-        const data = await r.json();
-        state = { ...state, ...data };
-      }
-    } catch(e) { console.error("API Error", e); }
-    renderUI();
-    if (typeof renderBanked === 'function') renderBanked();
-  }
-;
-    localStorage.setItem('lanzarus_state', JSON.stringify(state));
-    renderUI();
-  renderBanked();
-  renderBanked();
+// ── CARGA DE DATOS ────────────────────────────────────────────────
+async function loadData() {
+  try {
+    const r = await fetch('/api/');
+    if (r.ok) {
+      const data = await r.json();
+      state = { ...state, ...data };
+      localStorage.setItem('lanzarus_state', JSON.stringify(state));
+    } else {
+      throw new Error('API no OK');
+    }
   } catch(e) {
-    console.warn('InverGrow offline, usando datos locales:', e);
-    // Cargar desde localStorage si existe
+    console.warn('API offline, usando caché local:', e);
     const saved = localStorage.getItem('lanzarus_state');
     if (saved) {
-      try {
-        state = { ...state, ...JSON.parse(saved) };
-        renderUI();
-  renderBanked();
-  renderBanked();
-      } catch(e2) {}
+      try { state = { ...state, ...JSON.parse(saved) }; } catch(e2) {}
     }
   }
+  renderUI();
+  if (typeof renderBanked === 'function') renderBanked();
 }
 
 async function syncInverGrow() {
