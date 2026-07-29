@@ -964,7 +964,7 @@ function renderAI() {
 }
 
 // ── LOAD DATA ─────────────────────────────────────────────────────
-async function loadData() {
+async function loadData() { try {
   try {
     const r = await fetch('/api/');
     if (!r.ok) throw new Error('HTTP ' + r.status);
@@ -1259,7 +1259,7 @@ function renderRvHistory() {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────
-window.addEventListener('load', () => {
+window.addEventListener('load', () => { document.getElementById('loader').style.display='none';
   setTimeout(() => {
     document.getElementById('loader').style.opacity = '0';
     setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
