@@ -964,32 +964,25 @@ function renderAI() {
 }
 
 // ── LOAD DATA ─────────────────────────────────────────────────────
-async function loadData() { try {
+async function loadData() {
   try {
     const r = await fetch('/api/');
     if (!r.ok) throw new Error('HTTP ' + r.status);
     const data = await r.json();
     state = { ...state, ...data };
     localStorage.setItem('lanzarus_state', JSON.stringify(state));
-    renderUI();
-  renderBanked();
-  renderBanked();
   } catch(e) {
-    console.warn('InverGrow offline, usando datos locales:', e);
-    // Cargar desde localStorage si existe
+    console.warn('API offline, usando caché local:', e);
     const saved = localStorage.getItem('lanzarus_state');
     if (saved) {
-      try {
-        state = { ...state, ...JSON.parse(saved) };
-        renderUI();
-  renderBanked();
-  renderBanked();
-      } catch(e2) {}
+      try { state = { ...state, ...JSON.parse(saved) }; } catch(e2) {}
     }
   }
+  renderUI();
+  if (typeof renderBanked === 'function') renderBanked();
 }
 
-async function syncInverGrow() {
+async function syncInverGrowasync function syncInverGrow() {
   showToast('Sincronizando...');
   await loadData();
   showToast('✅ Datos actualizados');
@@ -1259,7 +1252,7 @@ function renderRvHistory() {
 }
 
 // ── INIT ──────────────────────────────────────────────────────────
-window.addEventListener('load', () => { document.getElementById('loader').style.display='none';
+window.addEventListener('load', () => {
   setTimeout(() => {
     document.getElementById('loader').style.opacity = '0';
     setTimeout(() => document.getElementById('loader').style.display = 'none', 500);
