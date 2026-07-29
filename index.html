@@ -813,64 +813,6 @@ function renderBanked() {
 
 
 // ── BANKED: Historial de retiros reales ────────────────────────
-function saveWithdrawal(amount, method, status) {
-  var history = JSON.parse(localStorage.getItem('lanzarus_withdrawals') || '[]');
-  history.unshift({
-    id: 'WD-' + Date.now(),
-    amount: amount,
-    method: method || 'PayPal',
-    status: status || 'PENDING',
-    date: new Date().toISOString(),
-    email: 'joanlazaro83@gmail.com'
-  });
-  localStorage.setItem('lanzarus_withdrawals', JSON.stringify(history));
-  renderBanked();
-}
-
-function renderBanked() {
-  var history = JSON.parse(localStorage.getItem('lanzarus_withdrawals') || '[]');
-  var list = document.getElementById('banked-list');
-  var count = document.getElementById('banked-count');
-  var totalEl = document.getElementById('banked-total');
-  var avgEl = document.getElementById('banked-avg');
-  var latestEl = document.getElementById('banked-latest');
-  if (!list) return;
-  if (history.length === 0) {
-    list.innerHTML = '<div style="color:var(--text3);font-size:13px;text-align:center;padding:30px 0">Aun no has retirado. Acumula saldo y retira!</div>';
-    if (count) count.textContent = '0 retiros';
-    if (totalEl) totalEl.textContent = '€0.00';
-    if (avgEl) avgEl.textContent = '€0.00';
-    if (latestEl) latestEl.textContent = '---';
-    return;
-  }
-  var total = 0;
-  for (var i = 0; i < history.length; i++) { total += history[i].amount; }
-  var avg = total / history.length;
-  if (count) count.textContent = history.length + ' retiro' + (history.length === 1 ? '' : 's');
-  if (totalEl) totalEl.textContent = '€' + total.toFixed(2);
-  if (avgEl) avgEl.textContent = '€' + avg.toFixed(2);
-  if (latestEl) {
-    var d = new Date(history[0].date);
-    latestEl.textContent = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short', year: 'numeric' });
-  }
-  var html = '';
-  for (var i = 0; i < history.length; i++) {
-    var w = history[i];
-    var isSuccess = w.status === 'COMPLETED';
-    var d = new Date(w.date);
-    var dateStr = d.toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) + ' ' + d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
-    html += '<div class="tx-item">' +
-      '<div class="tx-icon" style="background:' + (isSuccess ? 'rgba(0,255,136,0.1)' : 'rgba(255,107,53,0.1)') + '; color:' + (isSuccess ? '#00ff88' : '#ff6b35') + '">' + (isSuccess ? '✅' : '⏳') + '</div>' +
-      '<div class="tx-info">' +
-        '<div class="tx-name">Retiro PayPal</div>' +
-        '<div class="tx-date">' + dateStr + ' · ' + (isSuccess ? 'Completado' : 'Pendiente') + '</div>' +
-      '</div>' +
-      '<div class="tx-amount" style="color:' + (isSuccess ? '#00ff88' : '#ff6b35') + '">-' + w.amount.toFixed(2) + '€</div>' +
-    '</div>';
-  }
-  list.innerHTML = html;
-}
-
 function renderUI() {
   const s = state;
   document.getElementById('bal-num').textContent = Number(s.balance||0).toFixed(2);
